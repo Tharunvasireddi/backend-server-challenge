@@ -7,10 +7,10 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 const sendEmail = async(options)=>{
   const {data,error} = await resend.emails.send({
-    from : process.env.RESEND_FROM,
+    from : "Website <website@resend.dev>",
     to :[options.to],
     subject :options.subject,
-    message : options.message
+    html : options.message
   })
 
   if(error){

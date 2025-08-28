@@ -144,10 +144,6 @@ export const forgotPassword = catchAsync(async (req, res, next) => {
   try {
     // 4) Send email
     sendEmail({to : user.email,message : message,subject:subject})
-    res.status(200).json({
-      status: 'success',
-      message: 'Password reset link sent to email!'
-    });
   } catch (err) {
     // 5) If error sending email, clear the reset token
     return next(
@@ -155,6 +151,10 @@ export const forgotPassword = catchAsync(async (req, res, next) => {
       500
     );
   }
+  res.status(200).json({
+    status: 'success',
+    message: 'Password reset link sent to email!'
+  });
 });
 
 /**
@@ -163,6 +163,9 @@ export const forgotPassword = catchAsync(async (req, res, next) => {
  */
 export const resetPassword = catchAsync(async (req, res) => {
   // TODO: Implement reset password functionality
+  res.json({
+    message : "this password reset route"
+  })
 });
 
 /**
