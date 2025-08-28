@@ -4,7 +4,7 @@ import { generateToken } from "../utils/generateToken.js";
 import { deleteMediaFromCloudinary, uploadMedia } from "../utils/cloudinary.js";
 import { catchAsync, AppError } from "../middleware/error.middleware.js";
 import crypto from "crypto";
-import sendEmail from "../utils/email.js"
+import sendEmail from "../utils/email.js";
 /**
  * Create a new user account
  * @route POST /api/v1/users/signup
@@ -14,39 +14,6 @@ export const createUserAccount = catchAsync(async (req, res) => {
   
   // Create user
   const newUser = await User.create({ name, email, password });
-  
-  try {
-    // Send welcome email
-    const welcomeMessage = `
-      Welcome to our platform, ${name}!
-      
-      Thank you for signing up. We're excited to have you on board.
-      
-      Best regards,
-      The Team
-    `;
-    
-    const welcomeHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>Welcome to our platform, ${name}!</h2>
-        <p>Thank you for signing up. We're excited to have you on board.</p>
-        <p>Start exploring our platform and enjoy all the features we have to offer.</p>
-        <p>If you have any questions, feel free to reply to this email.</p>
-        <p>Best regards,<br>The Team</p>
-      </div>
-    `;
-    
-    await sendEmail({
-      email: newUser.email,
-      subject: 'Welcome to Our Platform!',
-      message: welcomeMessage,
-      html: welcomeHtml
-    });
-    
-  } catch (emailError) {
-    console.error('Failed to send welcome email:', emailError);
-    // Don't fail the request if email sending fails
-  }
   
   // Remove password from the response
   newUser.password = undefined;
@@ -173,24 +140,16 @@ export const forgotPassword = catchAsync(async (req, res, next) => {
   const resetUrl = `${req.protocol}://${req.get('host')}/api/v1/users/resetPassword/${resetToken}`;
   const message = `You are receiving this email because you (or someone else) has requested a password reset. Please make a PUT request to: \n\n ${resetUrl}\n\nThis password reset link will expire in 10 minutes.`;
 
+  const subject = "Password Reset Request (Valid for 10 Minutes)";
   try {
     // 4) Send email
-    await sendEmail({
-      email: user.email,
-      subject: 'Password Reset Request',
-      message
-    });
-
+    sendEmail({to : user.email,message : message,subject:subject})
     res.status(200).json({
       status: 'success',
       message: 'Password reset link sent to email!'
     });
   } catch (err) {
     // 5) If error sending email, clear the reset token
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
-    await user.save({ validateBeforeSave: false });
-
     return next(
       new AppError('There was an error sending the email. Please try again later!'),
       500
