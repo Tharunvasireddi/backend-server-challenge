@@ -11,17 +11,17 @@ import sendEmail from "../utils/email.js";
  */
 export const createUserAccount = catchAsync(async (req, res) => {
   const { name, email, password } = req.body;
-  
+
   // Create user
   const newUser = await User.create({ name, email, password });
-  
+
   // Remove password from the response
   newUser.password = undefined;
-  
+
   res.status(201).json({
     success: true,
-    message: 'User created successfully. Welcome email sent!',
-    data: newUser
+    message: "User created successfully. Welcome email sent!",
+    data: newUser,
   });
 });
 
@@ -93,25 +93,25 @@ export const updateUserProfile = catchAsync(async (req, res) => {
 export const changeUserPassword = catchAsync(async (req, res) => {
   // TODO: Implement change user password functionality
   const { currentPassword, newPassword } = req.body;
-  
+
   if (!newPassword) {
     throw new AppError("New password is required", 400);
   }
-  
+
   const user = await User.findById(req.user.id).select("+password");
-  
+
   if (!user) {
     throw new AppError("User not found", 404);
   }
-  
+
   const isPasswordCorrect = await user.comparePassword(currentPassword);
   if (!isPasswordCorrect) {
     throw new AppError("Current password is incorrect", 401);
   }
-  
+
   user.password = newPassword;
   await user.save(); // Let the pre-save hook handle password hashing
-  
+
   res.status(200).json({
     success: true,
     message: "password changed succesfully",
@@ -125,11 +125,11 @@ export const changeUserPassword = catchAsync(async (req, res) => {
 
 export const forgotPassword = catchAsync(async (req, res, next) => {
   const { email } = req.body;
-  
+
   // 1) Find user by email
   const user = await User.findOne({ email });
   if (!user) {
-    return next(new AppError('There is no user with that email address.', 404));
+    return next(new AppError("There is no user with that email address.", 404));
   }
 
   // 2) Generate reset token
@@ -137,23 +137,27 @@ export const forgotPassword = catchAsync(async (req, res, next) => {
   await user.save({ validateBeforeSave: false });
 
   // 3) Create reset URL
-  const resetUrl = `${req.protocol}://${req.get('host')}/api/v1/users/resetPassword/${resetToken}`;
+  const resetUrl = `${req.protocol}://${req.get(
+    "host"
+  )}/api/v1/users/resetPassword/${resetToken}`;
   const message = `You are receiving this email because you (or someone else) has requested a password reset. Please make a PUT request to: \n\n ${resetUrl}\n\nThis password reset link will expire in 10 minutes.`;
 
   const subject = "Password Reset Request (Valid for 10 Minutes)";
   try {
     // 4) Send email
-    sendEmail({to : user.email,message : message,subject:subject})
+    sendEmail({ to: user.email, message: message, subject: subject });
   } catch (err) {
     // 5) If error sending email, clear the reset token
     return next(
-      new AppError('There was an error sending the email. Please try again later!'),
+      new AppError(
+        "There was an error sending the email. Please try again later!"
+      ),
       500
     );
   }
   res.status(200).json({
-    status: 'success',
-    message: 'Password reset link sent to email!'
+    status: "success",
+    message: "Password reset link sent to email!",
   });
 });
 
@@ -163,9 +167,29 @@ export const forgotPassword = catchAsync(async (req, res, next) => {
  */
 export const resetPassword = catchAsync(async (req, res) => {
   // TODO: Implement reset password functionality
-  res.json({
-    message : "this password reset route"
-  })
+  const { token } = req.params;
+  const { password } = req.body;
+  console.log("this resetoken", token);
+  // get the user by token
+  const existedUser = await User.findOne({
+    resetPasswordToken: crypto.createHash("sha256").update(token).digest("hex"),
+    resetPasswordExpire: { $gt: Date.now() },
+  });
+  if (!existedUser) {
+    throw new AppError("user is not found", 400);
+  }
+  if (password === existedUser.password) {
+    throw new AppError("entered the another password", 400);
+  }
+  existedUser.password = password;
+  existedUser.resetPasswordToken = undefined;
+  existedUser.resetPasswordExpire = undefined;
+  await existedUser.save();
+
+  res.status(200).json({
+    success: true,
+    message: "password is changed successfully",
+  });
 });
 
 /**
